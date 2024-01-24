@@ -9,6 +9,8 @@ Pour lancer le WebApp il faut installer les bibliothèques Pyhton :
 <br>
 `pip install pymongo`
 <br><br>
-Une fois les bibliothèques installées, on peut lancer la commande qui va démarrer la WebApp :
+Il faut maintenant exécuter dans sa globalité le fichier `import api.ipynb` afin d'insérer en BDD les données de l'API nettoyées.
+<br><br>
+Une fois les bibliothèques installées et le fichier exécuter, on peut lancer la commande qui va démarrer la WebApp :
 <br><br>
 `streamlit run app.py`
