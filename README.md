@@ -1,4 +1,6 @@
-# TP NoSQL
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Spotify_logo_with_text.svg/1200px-Spotify_logo_with_text.svg.png" width="200" alt="Logo Spotify">
+
+# TP NoSQL - API Spotify
 
 ### Problématique : Quels artistes représentent le mieux leur genre muscial ?
 
