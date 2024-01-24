@@ -1,32 +1,30 @@
 # Importez les bibliothèques nécessaires
 import streamlit as st
 from pymongo import MongoClient
+import matplotlib.pyplot as plt
+import pandas as pd 
 
-# Connexion à la base de données MongoDB
+# Connexion à la base de données
 client = MongoClient("mongodb://localhost:27017/")
 db = client["spotify"]
 collection_genres = db["artists.genres"]
 collection_artists = db["artists"]
 
 # Titre de l'application
-st.title("Application Spotify avec Streamlit")
+st.title("API Spotify")
 
-# Choix de la page (Artiste ou Genre)
-selected_page = st.sidebar.radio("Sélectionnez une page", ["Artistes", "Genres"])
+# Choix de la page
+selected_page = st.sidebar.radio("Sélectionnez une page", ["Artistes", "Genres", "Graphique"])
 
 if selected_page == "Artistes":
-     # Page des Artistes
-    # Paramètres de pagination pour les artistes
-    page_size_artists = 10
+    # Mise en place de la pagination
+    page_size_artists = 12
     page_number_artists = st.sidebar.number_input("Numéro de la page des artistes", min_value=1, value=1)
 
-    # Calcul de l'index de départ pour les artistes
-    start_index_artists = (page_number_artists - 1) * page_size_artists
-
     # Récupérer les artistes avec pagination
+    start_index_artists = (page_number_artists - 1) * page_size_artists
     artists = collection_artists.find({}).skip(start_index_artists).limit(page_size_artists)
 
-    # Afficher les résultats des artistes dans la page principale avec 3 artistes par ligne
     st.subheader("Artistes")
     artist_count = 0
 
@@ -36,10 +34,10 @@ if selected_page == "Artistes":
         with columns[artist_count % 3]:
             st.header(artist["name"])
             
-            # Affiche l'image associée à l'artiste
+            # Affiche l'image de l'artiste
             if "images" in artist and len(artist["images"]) > 0:
                 first_image = artist["images"][0]
-                st.image(first_image["url"], caption="Image 1", use_column_width=True)
+                st.image(first_image["url"], use_column_width=True)
 
             st.write(f"Popularité: {artist['popularity']}")
             st.write(f"Genres: {', '.join(artist['genres'])}")
@@ -48,31 +46,69 @@ if selected_page == "Artistes":
 
         artist_count += 1
 
-    # Afficher la pagination en bas de la page des artistes
-    st.write("---")
-    st.write("Page suivante des artistes")
-
-else:
-    # Page des Genres
-    # Paramètres de pagination pour les genres
+elif selected_page == "Genres":
+    # Mise en place de la pagination
     page_size_genres = 10
     page_number_genres = st.sidebar.number_input("Numéro de la page des genres", min_value=1, value=1)
 
-    # Calcul de l'index de départ pour les genres
-    start_index_genres = (page_number_genres - 1) * page_size_genres
-
     # Récupérer les genres avec pagination
+    start_index_genres = (page_number_genres - 1) * page_size_genres
     genres = collection_genres.find({}).skip(start_index_genres).limit(page_size_genres)
 
-    # Afficher les résultats des genres dans la page principale
+    # Affichage
     st.subheader("Genres Musicaux")
     for genre in genres:
         st.header(genre["nom"])
         
-        # Vous pouvez afficher d'autres détails spécifiques à vos genres ici
+elif selected_page == "Graphique":
+    # 
+    # GRAPHIQUE DU NOMBRE D'ARTISTES PAR GENRES
+    # 
+    genres_data = pd.DataFrame(list(collection_genres.find({}, {"_id": 0, "nom": 1})))
 
-        st.write("---")
+    # Permet de compter direct dans MongoDB afin de gagner du temps de chargement
+    pipeline = [
+        {
+            "$unwind": "$genres"
+        },
+        {
+            "$group": {
+                "_id": "$genres",
+                "artists_count": {"$sum": 1}
+            }
+        },
+        {
+            "$sort": {"artists_count": -1}
+        },
+        {
+            "$limit": 5
+        }
+    ]
 
-    # Afficher la pagination en bas de la page des genres
-    st.write("---")
-    st.write("Page suivante des genres")
+    genres_data = pd.DataFrame(list(collection_artists.aggregate(pipeline)))
+
+    st.subheader("Nombre d'artistes par genre (Top 5)")
+    fig, ax = plt.subplots()
+    genres_data.plot(kind='bar', x='_id', y='artists_count', ax=ax, rot=45)
+    ax.set_xlabel("Genre")
+    ax.set_ylabel("Nombre d'artistes")
+    ax.set_title("Nombre d'artistes par genre musical (Top 5)")
+    st.pyplot(fig)
+
+
+    # 
+    # GRAPHIQUE DES ARTISTES LES PLUS POPULAIRES
+    # 
+    top_artists = pd.DataFrame(list(collection_artists.find({}, {"_id": 0, "name": 1, "popularity": 1})))
+    top_5_artists = top_artists.nlargest(5, 'popularity')
+
+    st.subheader("Les 5 artistes les plus populaires")
+    fig, ax = plt.subplots()
+    top_5_artists.plot(kind='bar', x='name', y='popularity', ax=ax, rot=45)
+    ax.set_xlabel("Artiste")
+    ax.set_ylabel("Popularité")
+    ax.set_title("Les 5 artistes les plus populaires")
+    st.pyplot(fig)
+
+else:
+    st.write("Sélectionnez une page dans la barre latérale.")
