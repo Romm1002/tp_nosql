@@ -1,28 +1,23 @@
-# Importez les bibliothèques nécessaires
 import streamlit as st
 from pymongo import MongoClient
 import matplotlib.pyplot as plt
 import pandas as pd 
 
-# Connexion à la base de données
 client = MongoClient("mongodb://localhost:27017/")
 db = client["spotify"]
 collection_genres = db["artists.genres"]
 collection_artists = db["artists"]
 
-# Titre de l'application
 st.title("API Spotify")
 
-# Choix de la page
-selected_page = st.sidebar.radio("Sélectionnez une page", ["Artistes", "Genres", "Graphique"])
+selected_page = st.sidebar.radio("Sélectionnez une page", ["Artistes", "Genres", "Graphique"]])
 
 if selected_page == "Artistes":
-    # Mise en place de la pagination
     page_size_artists = 12
     page_number_artists = st.sidebar.number_input("Numéro de la page des artistes", min_value=1, value=1)
 
-    # Récupérer les artistes avec pagination
     start_index_artists = (page_number_artists - 1) * page_size_artists
+
     artists = collection_artists.find({}).skip(start_index_artists).limit(page_size_artists)
 
     st.subheader("Artistes")
@@ -33,8 +28,7 @@ if selected_page == "Artistes":
     for artist in artists:
         with columns[artist_count % 3]:
             st.header(artist["name"])
-            
-            # Affiche l'image de l'artiste
+        
             if "images" in artist and len(artist["images"]) > 0:
                 first_image = artist["images"][0]
                 st.image(first_image["url"], use_column_width=True)
@@ -46,19 +40,32 @@ if selected_page == "Artistes":
 
         artist_count += 1
 
+    st.write("---")
+
 elif selected_page == "Genres":
-    # Mise en place de la pagination
     page_size_genres = 10
     page_number_genres = st.sidebar.number_input("Numéro de la page des genres", min_value=1, value=1)
 
-    # Récupérer les genres avec pagination
     start_index_genres = (page_number_genres - 1) * page_size_genres
+
     genres = collection_genres.find({}).skip(start_index_genres).limit(page_size_genres)
 
-    # Affichage
     st.subheader("Genres Musicaux")
     for genre in genres:
-        st.header(genre["nom"])
+        st.header(genre["nom"]) 
+         
+        top_artist_document = db['artists.artists_genres'].aggregate([
+            {"$match": {"genre_id":  genre['_id']}},
+            {"$lookup": {"from": "artists", "localField": "artist_id", "foreignField": "_id", "as": "artist"}},
+            {"$unwind": "$artist"},
+            {"$sort": {"artist.popularity": -1}},
+            {"$limit": 1}
+        ])
+        artist = next(top_artist_document, None)
+        st.write("Top artiste:", artist["artist"]["name"])
+        st.write("Popularité de l'artiste:", artist["artist"]["popularity"])
+        
+        st.write("---")
         
 elif selected_page == "Graphique":
     # 
