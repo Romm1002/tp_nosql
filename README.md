@@ -10,6 +10,16 @@ Pour lancer le WebApp il faut installer les bibliothèques Pyhton :
 `pip install streamlit`
 <br>
 `pip install pymongo`
+<br>
+`pip install streamlit`
+<br>
+`pip install requests`
+<br>
+`pip install json`
+<br>
+`pip install panda`
+<br>
+`pip install matplotlib`
 <br><br>
 Il faut maintenant exécuter dans sa globalité le fichier `import api.ipynb` afin d'insérer en BDD les données de l'API nettoyées.
 <br><br>
