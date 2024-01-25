@@ -154,5 +154,27 @@ elif selected_page == "Graphiques":
 
 
 
+
+    st.write("---")
+    # 
+    # GRAPHIQUE REPARTITION DE LA POPULARTIE DES ARTISTES PAR GENRE
+    #
+    genres_data = {genre["nom"]: genre["_id"] for genre in collection_genres.find().limit(40)}
+    genres = genres = list(genres_data.keys())
+
+    selected_genre_name = st.selectbox("Sélectionnez un genre", genres)
+    selected_genre_id = genres_data[selected_genre_name]
+    if selected_genre_id:
+        artists_document = db['artists.artists_genres'].aggregate([
+            {"$match": {"genre_id":  selected_genre_id}},
+            {"$lookup": {"from": "artists", "localField": "artist_id", "foreignField": "_id", "as": "artist"}},
+            {"$unwind": "$artist"},
+            {"$sort": {"artist.popularity": -1}}
+        ])
+
+        data = [{"_id": doc['artist']['_id'], "popularity": doc['artist']['popularity']} for doc in artists_document]
+        st.write(f"{len(data)} artistes dans ce genre")
+
+
 else:
     st.write("Sélectionnez une page dans la barre latérale.")
