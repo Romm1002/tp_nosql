@@ -10,7 +10,7 @@ collection_artists = db["artists"]
 
 st.title("API Spotify")
 
-selected_page = st.sidebar.radio("Sélectionnez une page", ["Artistes", "Genres", "Graphique"]])
+selected_page = st.sidebar.radio("Sélectionnez une page", ["Artistes", "Genres", "Graphiques"])
 
 if selected_page == "Artistes":
     page_size_artists = 12
@@ -51,9 +51,9 @@ elif selected_page == "Genres":
     genres = collection_genres.find({}).skip(start_index_genres).limit(page_size_genres)
 
     st.subheader("Genres Musicaux")
+
     for genre in genres:
-        st.header(genre["nom"]) 
-         
+        st.header(genre["nom"])         
         top_artist_document = db['artists.artists_genres'].aggregate([
             {"$match": {"genre_id":  genre['_id']}},
             {"$lookup": {"from": "artists", "localField": "artist_id", "foreignField": "_id", "as": "artist"}},
@@ -64,16 +64,13 @@ elif selected_page == "Genres":
         artist = next(top_artist_document, None)
         st.write("Top artiste:", artist["artist"]["name"])
         st.write("Popularité de l'artiste:", artist["artist"]["popularity"])
-        
-        st.write("---")
-        
-elif selected_page == "Graphique":
+    st.write("---")
+       
+elif selected_page == "Graphiques":
     # 
     # GRAPHIQUE DU NOMBRE D'ARTISTES PAR GENRES
     # 
-    genres_data = pd.DataFrame(list(collection_genres.find({}, {"_id": 0, "nom": 1})))
 
-    # Permet de compter direct dans MongoDB afin de gagner du temps de chargement
     pipeline = [
         {
             "$unwind": "$genres"
@@ -116,6 +113,28 @@ elif selected_page == "Graphique":
     ax.set_ylabel("Popularité")
     ax.set_title("Les 5 artistes les plus populaires")
     st.pyplot(fig)
+
+
+    st.write("---")
+    # 
+    # GRAPHIQUE REPARTITION DE LA POPULARTIE DES ARTISTES PAR GENRE
+    #
+    genres_data = {genre["nom"]: genre["_id"] for genre in collection_genres.find().limit(40)}
+    genres = genres = list(genres_data.keys())
+
+    selected_genre_name = st.selectbox("Sélectionnez un genre", genres)
+    selected_genre_id = genres_data[selected_genre_name]
+    if selected_genre_id:
+        artists_document = db['artists.artists_genres'].aggregate([
+            {"$match": {"genre_id":  selected_genre_id}},
+            {"$lookup": {"from": "artists", "localField": "artist_id", "foreignField": "_id", "as": "artist"}},
+            {"$unwind": "$artist"},
+            {"$sort": {"artist.popularity": -1}}
+        ])
+
+        data = [{"_id": doc['artist']['_id'], "popularity": doc['artist']['popularity']} for doc in artists_document]
+        st.write(f"{len(data)} artistes dans ce genre")
+
 
 else:
     st.write("Sélectionnez une page dans la barre latérale.")
